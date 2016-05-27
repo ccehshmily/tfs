@@ -19,10 +19,31 @@ class HistoryDataUtil:
     The (features, metric) is (all info for past N days, price change after L days)
     """
 
+    def genFeatures(dailyData):
+        featureList = []
+        for data in dailyData:
+            dataFloat = [float(oneData) for oneData in data]
+            dataModified = dataFloat[:-2] + [dataFloat[-1]/1000, dataFloat[-1]]
+            featureList = featureList + dataModified[3:]
+        return featureList
+
+    def genLabel(dataNow, dataLater):
+        priceNow = float(dataNow[-1])
+        priceLater = float(dataLater[-1])
+        pChangePercent = (priceLater - priceNow) / priceNow
+
+        labelList = [0] * 2
+        if pChangePercent <= 0:
+            labelList[0] = 1
+        else:
+            labelList[1] = 1
+
+        return labelList
+
     @staticmethod
     def extractDailyData(filename):
         """
-        Convert raw data to daily data, represented a list of lists, ordered by
+        Convert raw data to daily data, represented as list of lists, ordered by
         date ascending.
         """
         dailyData = []
@@ -36,7 +57,7 @@ class HistoryDataUtil:
         return dailyData
 
     @staticmethod
-    def generateTFData(dailyData, N=100, L=2, dateInfoWanted=True):
+    def generateTFData(dailyData, N=10, L=1, featureGenerator=genFeatures, labelGenerator=genLabel):
         """
         Convert daily data to format that TF can use. Divided to 0.8 training
         and 0.2 testing/validation.
@@ -48,75 +69,15 @@ class HistoryDataUtil:
         trainFeature = []
         trainLabel = []
         for i in range(nDaysTrain):
-            trainFeature.append(HistoryDataUtil.genFeatures(dailyData[i:i+N], dateInfoWanted))
-            trainLabel.append(HistoryDataUtil.genLabel(dailyData[i+N-1], dailyData[i+N+L-1]))
+            trainFeature.append(featureGenerator(dailyData[i:i+N]))
+            trainLabel.append(labelGenerator(dailyData[i+N-1], dailyData[i+N+L-1]))
         trainData = (trainFeature, trainLabel)
 
         testFeature = []
         testLabel = []
         for i in range(nDaysTest):
-            testFeature.append(HistoryDataUtil.genFeatures(dailyData[i+nDaysTrain:i+nDaysTrain+N], dateInfoWanted))
-            testLabel.append(HistoryDataUtil.genLabel(dailyData[i+N+nDaysTrain-1], dailyData[i+N+L+nDaysTrain-1]))
+            testFeature.append(featureGenerator(dailyData[i+nDaysTrain:i+nDaysTrain+N]))
+            testLabel.append(labelGenerator(dailyData[i+N+nDaysTrain-1], dailyData[i+N+L+nDaysTrain-1]))
         testData = (testFeature, testLabel)
 
         return (trainData, testData)
-
-    @staticmethod
-    def genFeatures(dailyData, dateInfoWanted):
-        featureList = []
-        for data in dailyData:
-            dataFloat = [float(oneData) for oneData in data]
-            dataModified = dataFloat[:-2] + [dataFloat[-1]/1000, dataFloat[-1]]
-            if dateInfoWanted:
-                featureList = featureList + dataModified
-            else:
-                featureList = featureList + dataModified[3:]
-        return featureList
-
-    @staticmethod
-    def genLabel(dataNow, dataLater):
-        priceNow = float(dataNow[-1])
-        priceLater = float(dataLater[-1])
-        pChangePercent = (priceLater - priceNow) / priceNow
-        
-        labelList = [0] * 10
-        if pChangePercent < -0.1:
-            labelList[0] = 1
-        elif pChangePercent < -0.06:
-            labelList[1] = 1
-        elif pChangePercent < -0.04:
-            labelList[2] = 1
-        elif pChangePercent < -0.02:
-            labelList[3] = 1
-        elif pChangePercent <= 0:
-            labelList[4] = 1
-        elif pChangePercent < 0.02:
-            labelList[5] = 1
-        elif pChangePercent < 0.04:
-            labelList[6] = 1
-        elif pChangePercent < 0.06:
-            labelList[7] = 1
-        elif pChangePercent < 0.1:
-            labelList[8] = 1
-        else:
-            labelList[9] = 1
-
-        """
-        labelList = [0] * 3
-        if pChangePercent < -0.02:
-            labelList[0] = 1
-        elif pChangePercent <= 0.02:
-            labelList[1] = 1
-        else:
-            labelList[2] = 1
-        """
-
-        """
-        labelList = [0] * 2
-        if pChangePercent <= 0:
-            labelList[0] = 1
-        else:
-            labelList[1] = 1
-        """
-
-        return labelList

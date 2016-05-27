@@ -8,15 +8,40 @@ from ..datasource.HistoryDataUtil import HistoryDataUtil as dUtil
 import tensorflow as tf
 import math
 
-flags = tf.app.flags
-FLAGS = flags.FLAGS
-flags.DEFINE_string('data_dir', '/tmp/data/', 'Directory for storing data')
+def genLabel10(dataNow, dataLater):
+    priceNow = float(dataNow[-1])
+    priceLater = float(dataLater[-1])
+    pChangePercent = (priceLater - priceNow) / priceNow
+
+    labelList = [0] * 10
+    if pChangePercent < -0.1:
+        labelList[0] = 1
+    elif pChangePercent < -0.06:
+        labelList[1] = 1
+    elif pChangePercent < -0.04:
+        labelList[2] = 1
+    elif pChangePercent < -0.02:
+        labelList[3] = 1
+    elif pChangePercent <= 0:
+        labelList[4] = 1
+    elif pChangePercent < 0.02:
+        labelList[5] = 1
+    elif pChangePercent < 0.04:
+        labelList[6] = 1
+    elif pChangePercent < 0.06:
+        labelList[7] = 1
+    elif pChangePercent < 0.1:
+        labelList[8] = 1
+    else:
+        labelList[9] = 1
+    return labelList
+
 
 dailyData = dUtil.extractDailyData('tfs/datasource/sampledata/sampleGOOG.txt')
-dataSet = dUtil.generateTFData(dailyData, N=10, L=1, dateInfoWanted=False)
+dataSet = dUtil.generateTFData(dailyData)
 featureLen = len(dataSet[0][0][0])
 
-classifiedClasses = 10
+classifiedClasses = 2
 hidden1_units = int(featureLen / 2)
 hidden2_units = int(featureLen / 2)
 
@@ -26,10 +51,6 @@ sess = tf.InteractiveSession()
 
 # Create the model
 x = tf.placeholder(tf.float32, [None, featureLen])
-#W = tf.Variable(tf.truncated_normal([featureLen, classifiedClasses], stddev=1.0 / math.sqrt(float(featureLen))))
-#W = tf.Variable(tf.zeros([featureLen, classifiedClasses]))
-#b = tf.Variable(tf.zeros([classifiedClasses]))
-#y = tf.nn.softmax(tf.matmul(x, W) + b)
 
 # Hidden 1
 with tf.name_scope('hidden1'):
